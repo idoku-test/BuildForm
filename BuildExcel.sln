@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.21005.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BuildExcel", "BuildExcel\BuildExcel.csproj", "{49759257-7112-489B-8501-36C60471F0D8}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "NOPI", "NOPI", "{D5C2BEFD-8C6A-412F-AE17-5EB9C9CA1077}"
+	ProjectSection(SolutionItems) = preProject
+		NPOI\ICSharpCode.SharpZipLib.dll = NPOI\ICSharpCode.SharpZipLib.dll
+		NPOI\Ionic.Zip.dll = NPOI\Ionic.Zip.dll
+		NPOI\NPOI.dll = NPOI\NPOI.dll
+		NPOI\NPOI.OOXML.dll = NPOI\NPOI.OOXML.dll
+		NPOI\NPOI.OpenXml4Net.dll = NPOI\NPOI.OpenXml4Net.dll
+		NPOI\NPOI.OpenXmlFormats.dll = NPOI\NPOI.OpenXmlFormats.dll
+		NPOI\NPOI.ScratchPad.HWPF.dll = NPOI\NPOI.ScratchPad.HWPF.dll
+		NPOI\NPOI.XML = NPOI\NPOI.XML
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{49759257-7112-489B-8501-36C60471F0D8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{49759257-7112-489B-8501-36C60471F0D8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{49759257-7112-489B-8501-36C60471F0D8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{49759257-7112-489B-8501-36C60471F0D8}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
