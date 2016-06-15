@@ -24,14 +24,11 @@ namespace BuildExcel
 
         }
 
-
-
         public BuildExcel(Stream fileStream)
         {
             workbook = new HSSFWorkbook(fileStream);
             this.currentSheet = (HSSFSheet)this.workbook.GetSheetAt(0);
         }
-
 
         /// <summary>
         /// NPOI文档流
@@ -65,7 +62,7 @@ namespace BuildExcel
         }
         #endregion
 
-        #region public
+        #region--get stream
         /// <summary>
         /// 获取Excel文件流
         /// </summary>
@@ -77,20 +74,17 @@ namespace BuildExcel
             stream.Position = 0;
             return stream;
         }
+        #endregion
 
-        [ConditionalAttribute("DEBUG")]
-        public void PrintCurrentSheet()
-        {
-            for (int rowIndex = 0; rowIndex < currentSheet.LastRowNum; rowIndex++)
-            {
-                IRow row = currentSheet.GetRow(rowIndex);
-                for (int cellIndex = 0; cellIndex < row.LastCellNum; cellIndex++)
-                {
-                    Console.WriteLine(row.GetCell(cellIndex).StringCellValue);
-                }
-            }
+        #region --insert text
+        public void InsertText(string text, int row, int col)
+        {            
+            IRow r = CellUtil.GetRow(row, currentSheet);
+            if (r == null)
+                r = currentSheet.CreateRow(row);
+            ICell cell = CellUtil.CreateCell(r, col, text, CreateStyle());                        
         }
-        
+
         public void Replace(string what, string replacement)
         {
             ICell cell = FindFirstCell(currentSheet, what);
@@ -99,20 +93,92 @@ namespace BuildExcel
                 cell.SetCellValue(replacement);
             }
         }
+        #endregion
+
+        #region --insert table     
+
+        public void InsertTable(DataTable table, int row, int col)
+        {
+            ICell cell = GetCell(row, col);
+            if (cell != null)
+            {
+                int rowCount = table.Rows.Count;
+                int rowIndex = cell.RowIndex;
+                InsertRows(currentSheet, rowIndex, rowCount);
+                InsertTable(table, rowIndex, true);
+            }
+        }
+
 
         public void ReplaceInsertTable(string what, DataTable table)
         {
             ICell cell = FindFirstCell(currentSheet, what);
             if (cell != null)
-            {
-                int sheetIndex = workbook.GetSheetIndex(currentSheet);
+            {            
                 int rowCount = table.Rows.Count;
                 int rowIndex = cell.RowIndex;
                 InsertRows(currentSheet, rowIndex + 1, rowCount - 1);//remove what row
-                InsertDataTable(table, sheetIndex, rowIndex, false);                
+                InsertTable(table, rowIndex, false);                
             }
         }
 
+        public void InsertTable(DataTable table, int rowIndex, bool hasHeader)
+        {
+            var sheet = currentSheet;
+            var style = GetThinBDRStyle();
+            if (hasHeader)
+            {
+                var headerRow = sheet.CreateRow(rowIndex);
+                foreach (DataColumn column in table.Columns)
+                {
+                    var headerCell = headerRow.CreateCell(column.Ordinal);
+                    headerCell.SetCellValue(column.ColumnName);
+                    headerCell.CellStyle = style;
+                }
+                rowIndex++;
+            }
+            foreach (DataRow row in table.Rows)
+            {
+                var dataRow = sheet.CreateRow(rowIndex++);
+
+                foreach (DataColumn column in table.Columns)
+                {
+                    var cell = dataRow.CreateCell(column.Ordinal);
+                    cell.SetCellValue(row[column].ToString());
+                    cell.CellStyle = style;
+                }
+            }
+        }
+
+        #endregion
+
+        #region--find cell
+        private ICell FindFirstCell(ISheet sheet, string text)
+        {
+            for (int rowIndex = 0; rowIndex < sheet.LastRowNum; rowIndex++)
+            {
+                IRow row = sheet.GetRow(rowIndex);
+                for (int cellIndex = 0; cellIndex < row.LastCellNum; cellIndex++)
+                {
+                    ICell cell = row.GetCell(cellIndex);
+                    if (cell.StringCellValue.Equals(text))
+                    {
+                        return cell;
+                    }
+                }
+            }
+            return null;
+        }
+        #endregion
+
+        #region--merge region
+        public void MergedRegion(int firstRow, int lastRow, int firstCol, int lastCol)
+        {
+            currentSheet.AddMergedRegion(new CellRangeAddress(firstRow, lastRow, firstCol, lastCol));
+        }
+        #endregion
+
+        #region -- set border
         public void SetBorder(int firstRow, int lastRow, int firstCol, int lastCol)
         {
             for (int rowIndex = firstRow; rowIndex < lastRow; rowIndex++)
@@ -156,55 +222,74 @@ namespace BuildExcel
             return style;
         }
 
-        public void MergedRegion(int firstRow, int lastRow, int firstCol, int lastCol)
+        private void SetCellBorder(ISheet sheet, int firstRow, int lastRow, int firstCol, int lastCol)
         {
-            currentSheet.AddMergedRegion(new CellRangeAddress(firstRow, lastRow, firstCol, lastCol));
-        }
 
-        #endregion
-
-    
-
-     
-
-
-        #region DataTable helper
-
-        
-
-        public void InsertDataTable(DataTable table)
-        {
-            InsertDataTable(table, 0, 0, true);
-        }
-
-        public void InsertDataTable(DataTable table, int sheetIndex,int rowIndex,bool hasHeader)
-        {
-            string sheetName = workbook.GetSheetName(sheetIndex);
-            var sheet = workbook.GetSheet(sheetName);
-            var style = GetThinBDRStyle();
-            if (hasHeader)
+            for (int rowIndex = 0; rowIndex < sheet.LastRowNum; rowIndex++)
             {
-                var headerRow = sheet.CreateRow(rowIndex);
-                foreach (DataColumn column in table.Columns)
+                IRow row = sheet.GetRow(rowIndex);
+                for (int cellIndex = 0; cellIndex < row.LastCellNum; cellIndex++)
                 {
-                    var headerCell = headerRow.CreateCell(column.Ordinal);
-                    headerCell.SetCellValue(column.ColumnName);
-                    headerCell.CellStyle = style;
-                }
-                rowIndex++;
-            }            
-            foreach (DataRow row in table.Rows)
-            {
-                var dataRow = sheet.CreateRow(rowIndex++);
-                
-                foreach (DataColumn column in table.Columns)
-                {
-                    var cell = dataRow.CreateCell(column.Ordinal);
-                    cell.SetCellValue(row[column].ToString());
-                    cell.CellStyle = style;
+                    ICell cell = row.GetCell(cellIndex);
+                    cell.CellStyle = GetThinBDRStyle();
                 }
             }
         }
+        #endregion
+
+        #region--set style
+        private ICellStyle CreateStyle()
+        {
+            ICellStyle style = workbook.CreateCellStyle();
+            return style;
+        }
+
+        public void SetCellCenter(int row, int col)
+        {
+            ICell cell = GetCell(row, col);            
+            ICellStyle style = cell.CellStyle;
+            style.Alignment = HorizontalAlignment.CENTER;
+            cell.CellStyle = style;
+        }
+
+        public void SetFont(int fontHeight,int row, int col) {
+            ICell cell = GetCell(row, col);
+            ICellStyle style = cell.CellStyle;
+            IFont font = workbook.CreateFont();
+            font.FontHeight = (short)fontHeight;
+            style.SetFont(font);
+            cell.CellStyle = style;
+
+        }
+        #endregion
+
+        private ICell GetCell(int row, int col)
+        {
+            IRow curRow = GetRow(row);            
+            return CellUtil.GetCell(curRow, col);
+        }
+
+        private IRow GetRow(int row)
+        {
+            return CellUtil.GetRow(row, currentSheet);
+        }
+
+        #region--debug
+        [ConditionalAttribute("DEBUG")]
+        public void PrintCurrentSheet()
+        {
+            for (int rowIndex = 0; rowIndex < currentSheet.LastRowNum; rowIndex++)
+            {
+                IRow row = currentSheet.GetRow(rowIndex);
+                for (int cellIndex = 0; cellIndex < row.LastCellNum; cellIndex++)
+                {
+                    Console.WriteLine(row.GetCell(cellIndex).StringCellValue);
+                }
+            }
+        }
+        #endregion
+
+        #region DataTable helper         
 
         /// <summary>
         /// 插入行
@@ -215,9 +300,9 @@ namespace BuildExcel
         private void InsertRows(ISheet sheet, int fromRowIndex, int rowCount)
         {
             sheet.ShiftRows(fromRowIndex, sheet.LastRowNum, rowCount, false, true);
-            for (int rowIndex = fromRowIndex; rowIndex < fromRowIndex+rowCount; rowIndex++)
+            for (int rowIndex = fromRowIndex; rowIndex < fromRowIndex + rowCount; rowIndex++)
             {
-                IRow rowSource = sheet.GetRow(rowIndex + rowCount);
+                IRow rowSource = sheet.GetRow(rowIndex + rowCount-1);
                 IRow rowInsert = sheet.CreateRow(rowIndex);
                 rowInsert.Height = rowSource.Height;
                 for (int colIndex = 0; colIndex < rowSource.LastCellNum; colIndex++)
@@ -233,43 +318,7 @@ namespace BuildExcel
         }
         #endregion
 
-     
-
-
-    
-
-        #region 
-        private void SetCellBorder(ISheet sheet, int firstRow, int lastRow, int firstCol, int lastCol)
-        {
-
-            for (int rowIndex = 0; rowIndex < sheet.LastRowNum; rowIndex++)
-            {
-                IRow row = sheet.GetRow(rowIndex);
-                for (int cellIndex = 0; cellIndex < row.LastCellNum; cellIndex++)
-                {
-                    ICell cell = row.GetCell(cellIndex);
-                    cell.CellStyle = GetThinBDRStyle();
-                }
-            }
-        }
-
-        private ICell FindFirstCell(ISheet sheet, string text)
-        {                      
-            for (int rowIndex = 0; rowIndex < sheet.LastRowNum; rowIndex++)
-            {
-                IRow row = sheet.GetRow(rowIndex);
-                for (int cellIndex = 0; cellIndex < row.LastCellNum; cellIndex++)
-                {
-                    ICell cell = row.GetCell(cellIndex);
-                    if (cell.StringCellValue.Equals(text))
-                    {
-                        return cell;
-                    }
-                }
-            }
-            return null;
-        }
-        #endregion
+       
 
     }
 }

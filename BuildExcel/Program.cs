@@ -15,9 +15,25 @@ namespace BuildExcel
     {
         static void Main(string[] args)
         {
+            //BuildExcel excel = new BuildExcel();
+            //excel.InsertText("业务统计", 0, 0);
+            //excel.SetCellCenter(0, 0);
+            //excel.SetFont(15 * 15, 0, 0);
+            //excel.MergedRegion(0, 0, 0, 4);
+            //excel.InsertText("统计时间", 1, 3);
+            //excel.InsertText("2015/5/1-2015/6/1", 1, 4);
+            //excel.InsertText("统计表", 2, 3);
+            //DataTable table = CreateTable(5, 5);
+            //excel.InsertTable(table, 1, 0);
+            //Stream ms = excel.GetStream();
+            //FileStream file = new FileStream("c.xls", FileMode.Create);
+            //ms.CopyTo(file);
+            //file.Close();
             InsertDataTable();
             Console.Read();
+            
         }
+
 
 
         public static void DictionaryTable()
@@ -32,7 +48,7 @@ namespace BuildExcel
 
             var dt = DictionaryToTable(dic, 3);
             BuildExcel excel = new BuildExcel();
-            excel.InsertDataTable(dt);
+            excel.InsertTable(dt, 0, true);
             Stream ms = excel.GetStream();
             FileStream file = new FileStream("a.xls", FileMode.Create);
             ms.CopyTo(file);
@@ -81,7 +97,15 @@ namespace BuildExcel
 
         public static void InsertDataTable() {
 
-            DataTable dt = CreateTable(3,8);
+            Dictionary<string, string> dic = new Dictionary<string, string>() { 
+            { "楼盘名称","123" },
+            { "楼盘地址","321" },
+            {"楼栋名称","123"},
+            {"楼栋地址","123"},
+            {"楼栋号","123"}
+            };
+
+            var dt = DictionaryToTable(dic, 4);
             FileStream file = new FileStream(@"Excel/template.xls", FileMode.Open, FileAccess.ReadWrite);
             BuildExcel excel = new BuildExcel(file);
          
@@ -131,7 +155,7 @@ namespace BuildExcel
 
             BuildExcel excel = new BuildExcel();
           
-            excel.InsertDataTable(dt);
+            excel.InsertTable(dt,0,true);
             Stream ms = excel.GetStream();
             FileStream file = new FileStream("b.xls", FileMode.Create);
             ms.CopyTo(file);
