@@ -103,8 +103,7 @@ namespace BuildExcel
             if (cell != null)
             {
                 int rowCount = table.Rows.Count;
-                int rowIndex = cell.RowIndex;
-                InsertRows(currentSheet, rowIndex, rowCount);
+                int rowIndex = cell.RowIndex;               
                 InsertTable(table, rowIndex, true);
             }
         }
@@ -114,18 +113,22 @@ namespace BuildExcel
         {
             ICell cell = FindFirstCell(currentSheet, what);
             if (cell != null)
-            {            
-                int rowCount = table.Rows.Count;
-                int rowIndex = cell.RowIndex;
-                InsertRows(currentSheet, rowIndex + 1, rowCount - 1);//remove what row
-                InsertTable(table, rowIndex, false);                
+            {                            
+                int rowCount = table.Rows.Count;                
+                int rowIndex = cell.RowIndex;     
+                ShiftRows(currentSheet, rowIndex + 1, rowIndex + rowCount, rowCount - 1);//keep what row
+                InsertTable(table, rowIndex, false);
             }
         }
 
         public void InsertTable(DataTable table, int rowIndex, bool hasHeader)
         {
-            var sheet = currentSheet;
-            var style = GetThinBDRStyle();
+            InsertTable(table, rowIndex, hasHeader, GetThinBDRStyle());
+        }
+
+        private void InsertTable(DataTable table, int rowIndex, bool hasHeader,ICellStyle style)
+        {
+            var sheet = currentSheet;          
             if (hasHeader)
             {
                 var headerRow = sheet.CreateRow(rowIndex);
@@ -244,6 +247,11 @@ namespace BuildExcel
             return style;
         }
 
+        /// <summary>
+        /// 设置单元居中
+        /// </summary>
+        /// <param name="row"></param>
+        /// <param name="col"></param>
         public void SetCellCenter(int row, int col)
         {
             ICell cell = GetCell(row, col);            
@@ -252,6 +260,12 @@ namespace BuildExcel
             cell.CellStyle = style;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="fontHeight"></param>
+        /// <param name="row"></param>
+        /// <param name="col"></param>
         public void SetFont(int fontHeight,int row, int col) {
             ICell cell = GetCell(row, col);
             ICellStyle style = cell.CellStyle;
@@ -263,16 +277,29 @@ namespace BuildExcel
         }
         #endregion
 
+        #region-- get row/cell
+        /// <summary>
+        /// 获取单元对象
+        /// </summary>
+        /// <param name="row"></param>
+        /// <param name="col"></param>
+        /// <returns></returns>
         private ICell GetCell(int row, int col)
         {
             IRow curRow = GetRow(row);            
             return CellUtil.GetCell(curRow, col);
         }
 
+        /// <summary>
+        /// 获取行对象
+        /// </summary>
+        /// <param name="row"></param>
+        /// <returns></returns>
         private IRow GetRow(int row)
         {
             return CellUtil.GetRow(row, currentSheet);
         }
+        #endregion
 
         #region--debug
         [ConditionalAttribute("DEBUG")]
@@ -289,33 +316,58 @@ namespace BuildExcel
         }
         #endregion
 
-        #region DataTable helper         
+        #region DataTable helper    
+        /// <summary>
+        /// 移动行
+        /// </summary>
+        /// <param name="sheet"></param>
+        /// <param name="fromRowIndex"></param>
+        /// <param name="endRowIndex"></param>
+        /// <param name="n"></param>
+        private void ShiftRows(ISheet sheet, int fromRowIndex,int endRowIndex, int n)
+        {
+            sheet.ShiftRows(fromRowIndex, endRowIndex, n, false, true);
+        }
+
+        /// <summary>
+        /// 拷贝行
+        /// </summary>
+        /// <param name="sheet"></param>
+        /// <param name="sourceRowIndex"></param>
+        /// <param name="formRowIndex"></param>
+        /// <param name="n"></param>
+        private void CopyRows(ISheet sheet, int sourceRowIndex,int formRowIndex, int n)
+        {
+            for (int i = formRowIndex; i < formRowIndex + n; i++)
+            {                
+                SheetUtil.CopyRow(sheet, sourceRowIndex, i);
+            }                
+        }
 
         /// <summary>
         /// 插入行
         /// </summary>
         /// <param name="sheet"></param>
         /// <param name="fromRowIndex"></param>
-        /// <param name="rowCount"></param>
-        private void InsertRows(ISheet sheet, int fromRowIndex, int rowCount)
-        {
-            sheet.ShiftRows(fromRowIndex, sheet.LastRowNum, rowCount, false, true);
-            for (int rowIndex = fromRowIndex; rowIndex < fromRowIndex + rowCount; rowIndex++)
-            {
-                IRow rowSource = sheet.GetRow(rowIndex + rowCount-1);
-                IRow rowInsert = sheet.CreateRow(rowIndex);
-                rowInsert.Height = rowSource.Height;
-                for (int colIndex = 0; colIndex < rowSource.LastCellNum; colIndex++)
-                {
-                    ICell cellSource = rowSource.GetCell(colIndex);
-                    ICell cellInsert = rowInsert.CreateCell(colIndex);
-                    if (cellSource != null)
-                    {
-                        cellInsert.CellStyle = cellSource.CellStyle;
-                    }
-                }
-            }
-        }
+        /// <param name="n"></param>
+        //private void InsertRows(ISheet sheet, int fromRowIndex, int n,ICell style)
+        //{
+        //    for (int rowIndex = fromRowIndex; rowIndex < fromRowIndex + n; rowIndex++)
+        //    {
+        //        IRow rowSource = sheet.GetRow(rowIndex + n);
+        //        IRow rowInsert = sheet.CreateRow(rowIndex);
+        //        rowInsert.Height = rowSource.Height;
+        //        for (int colIndex = 0; colIndex < rowSource.LastCellNum; colIndex++)
+        //        {
+        //            ICell cellSource = rowSource.GetCell(colIndex);
+        //            ICell cellInsert = rowInsert.CreateCell(colIndex);
+        //            if (cellSource != null)
+        //            {
+        //                cellInsert.CellStyle = cellSource.CellStyle;
+        //            }
+        //        }
+        //    }
+        //}
         #endregion
 
        

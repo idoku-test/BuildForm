@@ -15,21 +15,20 @@ namespace BuildExcel
     {
         static void Main(string[] args)
         {
-            //BuildExcel excel = new BuildExcel();
-            //excel.InsertText("业务统计", 0, 0);
-            //excel.SetCellCenter(0, 0);
-            //excel.SetFont(15 * 15, 0, 0);
-            //excel.MergedRegion(0, 0, 0, 4);
-            //excel.InsertText("统计时间", 1, 3);
-            //excel.InsertText("2015/5/1-2015/6/1", 1, 4);
-            //excel.InsertText("统计表", 2, 3);
-            //DataTable table = CreateTable(5, 5);
-            //excel.InsertTable(table, 1, 0);
-            //Stream ms = excel.GetStream();
-            //FileStream file = new FileStream("c.xls", FileMode.Create);
-            //ms.CopyTo(file);
-            //file.Close();
-            InsertDataTable();
+            BuildExcel excel = new BuildExcel();
+            excel.InsertText("业务统计", 0, 0);
+            excel.SetCellCenter(0, 0);
+            excel.SetFont(15 * 15, 0, 0);
+            excel.MergedRegion(0, 0, 0, 4);
+            excel.InsertText("统计时间", 1, 3);
+            excel.InsertText("2015/5/1-2015/6/1", 1, 4);            
+            DataTable table = CreateTable(5, 5);
+            excel.InsertTable(table,2 , 0);
+            Stream ms = excel.GetStream();
+            FileStream file = new FileStream("c.xls", FileMode.Create);
+            ms.CopyTo(file);
+            file.Close();
+           
             Console.Read();
             
         }
@@ -48,7 +47,7 @@ namespace BuildExcel
 
             var dt = DictionaryToTable(dic, 3);
             BuildExcel excel = new BuildExcel();
-            excel.InsertTable(dt, 0, true);
+            //excel.InsertTable(dt, 0, true);
             Stream ms = excel.GetStream();
             FileStream file = new FileStream("a.xls", FileMode.Create);
             ms.CopyTo(file);
@@ -110,7 +109,7 @@ namespace BuildExcel
             BuildExcel excel = new BuildExcel(file);
          
             excel.ReplaceInsertTable("《查勘信息》", dt);
-
+            
             excel.SetBorder(0, 0, 1, 1);
             Stream ms = excel.GetStream();                      
             FileStream saveTo = new FileStream("b.xls", FileMode.Create);
@@ -155,7 +154,7 @@ namespace BuildExcel
 
             BuildExcel excel = new BuildExcel();
           
-            excel.InsertTable(dt,0,true);
+            //excel.InsertTable(dt,0,true);
             Stream ms = excel.GetStream();
             FileStream file = new FileStream("b.xls", FileMode.Create);
             ms.CopyTo(file);
