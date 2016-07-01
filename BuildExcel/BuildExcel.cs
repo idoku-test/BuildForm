@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace BuildExcel
@@ -95,7 +96,20 @@ namespace BuildExcel
         }
         #endregion
 
-        #region --insert table     
+
+        #region--GetBookmarks，GetAllMarks，DelBookmarks
+        /// <summary>
+        /// 获取所有书签
+        /// </summary>
+        /// <returns></returns>
+        public List<string> GetBookmarks()
+        {
+            return FindAllText(currentSheet, @"《([^》]+)》"); ;
+        }
+
+        #endregion
+
+        #region --insert table
 
         public void InsertTable(DataTable table, int row, int col)
         {
@@ -155,7 +169,7 @@ namespace BuildExcel
 
         #endregion
 
-        #region--find cell
+        #region--find cell / find all
         private ICell FindFirstCell(ISheet sheet, string text)
         {
             for (int rowIndex = 0; rowIndex < sheet.LastRowNum; rowIndex++)
@@ -172,6 +186,31 @@ namespace BuildExcel
             }
             return null;
         }
+
+        private List<string> FindAllText(ISheet sheet, string pattern)
+        {
+            List<string> labels = new List<string>();
+            Regex labelRegex = new Regex(pattern);
+            for (int rowIndex = 0; rowIndex < sheet.LastRowNum; rowIndex++)
+            {
+                IRow row = sheet.GetRow(rowIndex);
+                for (int cellIndex = 0; cellIndex < row.LastCellNum; cellIndex++)
+                {
+                    ICell cell = row.GetCell(cellIndex);
+                    string strValue = cell.StringCellValue;
+                    if (labelRegex.IsMatch(strValue))
+                    {
+                        MatchCollection matchCollection = labelRegex.Matches(strValue);
+                        foreach (Match match in matchCollection)
+                        {
+                            labels.Add(match.Value);
+                        }
+                    }
+                }
+            }
+            return labels;            
+        }
+
         #endregion
 
         #region--merge region
@@ -266,7 +305,7 @@ namespace BuildExcel
         /// <param name="fontHeight"></param>
         /// <param name="row"></param>
         /// <param name="col"></param>
-        public void SetFont(int fontHeight,int row, int col) {
+        public void SetCellFont(int fontHeight,int row, int col) {
             ICell cell = GetCell(row, col);
             ICellStyle style = cell.CellStyle;
             IFont font = workbook.CreateFont();

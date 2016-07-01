@@ -15,24 +15,33 @@ namespace BuildExcel
     {
         static void Main(string[] args)
         {
+
+            FileStream file = new FileStream(@"Excel/template2.xls", FileMode.Open, FileAccess.ReadWrite);
+            BuildExcel excel = new BuildExcel(file);
+            var list = excel.GetBookmarks();
+            foreach (var item in list)
+            {
+                Console.Write(item + " ");
+            }
+            Console.Read();
+        }
+
+        private static void StatsTest()
+        {
             BuildExcel excel = new BuildExcel();
             excel.InsertText("业务统计", 0, 0);
             excel.SetCellCenter(0, 0);
-            excel.SetFont(15 * 15, 0, 0);
+            excel.SetCellFont(15*15, 0, 0);
             excel.MergedRegion(0, 0, 0, 4);
             excel.InsertText("统计时间", 1, 3);
-            excel.InsertText("2015/5/1-2015/6/1", 1, 4);            
+            excel.InsertText("2015/5/1-2015/6/1", 1, 4);
             DataTable table = CreateTable(5, 5);
-            excel.InsertTable(table,2 , 0);
+            excel.InsertTable(table, 2, 0);
             Stream ms = excel.GetStream();
             FileStream file = new FileStream("c.xls", FileMode.Create);
             ms.CopyTo(file);
             file.Close();
-           
-            Console.Read();
-            
         }
-
 
 
         public static void DictionaryTable()
