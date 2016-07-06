@@ -16,6 +16,23 @@ namespace BuildExcel
         static void Main(string[] args)
         {
 
+          
+            //BuildExcel excel = new BuildExcel();
+
+            FileStream file = new FileStream(@"Excel/template3.xls", FileMode.Open, FileAccess.ReadWrite);
+            BuildExcel excel = new BuildExcel(file);
+            //excel.ReplaceInRange("a", "b", "temp");
+            Stream ms = excel.GetStream();
+            FileStream saveTo = new FileStream("d.xls", FileMode.Create);
+            ms.CopyTo(saveTo);
+            ms.CopyTo(saveTo);
+            saveTo.Close();
+            file.Close();
+            Console.Read();
+        }
+
+        private static void BookMarkTest()
+        {
             FileStream file = new FileStream(@"Excel/template2.xls", FileMode.Open, FileAccess.ReadWrite);
             BuildExcel excel = new BuildExcel(file);
             var list = excel.GetBookmarks();
@@ -23,7 +40,6 @@ namespace BuildExcel
             {
                 Console.Write(item + " ");
             }
-            Console.Read();
         }
 
         private static void StatsTest()

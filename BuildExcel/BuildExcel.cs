@@ -11,15 +11,16 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using NPOI.HSSF.Record.CF;
 
 namespace BuildExcel
 {
-    public class BuildExcel 
+    public class BuildExcel
     {
         public BuildExcel()
         {
             this.workbook = new HSSFWorkbook();
-            currentSheet = (HSSFSheet)this.workbook.CreateSheet("sheet1");
+            currentSheet = (HSSFSheet) this.workbook.CreateSheet("sheet1");
             this.workbook.CreateSheet("sheet2");
             this.workbook.CreateSheet("sheet3");
 
@@ -28,7 +29,7 @@ namespace BuildExcel
         public BuildExcel(Stream fileStream)
         {
             workbook = new HSSFWorkbook(fileStream);
-            this.currentSheet = (HSSFSheet)this.workbook.GetSheetAt(0);
+            this.currentSheet = (HSSFSheet) this.workbook.GetSheetAt(0);
         }
 
         /// <summary>
@@ -45,7 +46,7 @@ namespace BuildExcel
         /// 当前单元
         /// </summary>
         private HSSFCell currentCell = null;
-        
+
         /// <summary>
         /// 单元样式
         /// </summary>
@@ -53,17 +54,20 @@ namespace BuildExcel
 
 
         #region 页操作
+
         /// <summary>
         /// 选择操作页
         /// </summary>
         /// <param name="sheetName"></param>
         public void SelectSheet(string sheetName)
         {
-            currentSheet = (HSSFSheet)workbook.GetSheet(sheetName);          
+            currentSheet = (HSSFSheet) workbook.GetSheet(sheetName);
         }
+
         #endregion
 
         #region--get stream
+
         /// <summary>
         /// 获取Excel文件流
         /// </summary>
@@ -75,62 +79,110 @@ namespace BuildExcel
             stream.Position = 0;
             return stream;
         }
+
         #endregion
 
         #region --insert text
+
         public void InsertText(string text, int row, int col)
-        {            
+        {
             IRow r = CellUtil.GetRow(row, currentSheet);
             if (r == null)
                 r = currentSheet.CreateRow(row);
-            ICell cell = CellUtil.CreateCell(r, col, text, CreateStyle());                        
-        }
+            ICell cell = CellUtil.CreateCell(r, col, text, CreateStyle());
+        }       
 
-        public void Replace(string what, string replacement)
-        {
-            ICell cell = FindFirstCell(currentSheet, what);
-            if (cell != null)
-            {
-                cell.SetCellValue(replacement);
-            }
-        }
         #endregion
 
+        #region--replace text
+        public void Replace(string what, string replacement)
+        {
+            Replace(currentSheet, what, replacement);
+        }
+
+        public void Replace(string what, string replacement, string rangeName)
+        {
+            var range = FindRange(rangeName);
+            Replace(range, what, replacement);
+        }
+
+        private void Replace(ISheet sheet, string what, string replacement)
+        {
+            for (int rIndex = sheet.FirstRowNum; rIndex < sheet.LastRowNum; rIndex++)
+            {
+                IRow row = GetRow(rIndex);
+                for (int cIndex = row.FirstCellNum; cIndex < row.LastCellNum; cIndex++)
+                {
+                    var cell = GetCell(row, cIndex);
+                    if (cell.StringCellValue.Equals(what))
+                    {
+                        cell.SetCellValue(replacement);
+                    }
+                }
+            }
+        }
+
+        private void Replace(CellRangeAddress range, string what, string replacement)
+        {
+            for (int rIndex = range.FirstRow; rIndex < range.LastRow; rIndex++)
+            {
+                IRow row = GetRow(rIndex);
+                for (int cIndex = range.FirstColumn; cIndex < range.LastColumn; cIndex++)
+                {
+                    var cell = GetCell(row, cIndex);
+                    if (cell.StringCellValue.Equals(what))
+                    {
+                        cell.SetCellValue(replacement);
+                    }
+                }
+            }
+        }       
+        #endregion
 
         #region--GetBookmarks，GetAllMarks，DelBookmarks
+
         /// <summary>
         /// 获取所有书签
         /// </summary>
         /// <returns></returns>
         public List<string> GetBookmarks()
         {
-            return FindAllText(currentSheet, @"《([^》]+)》"); ;
+            return FindAllText(currentSheet, @"《([^》]+)》");
         }
+
+        //public List<string> GetBookmarks(string range)
+        //{
+        //    var r = FindRange(range);
+        //    return FindAllTextInRange(r, @"《([^》]+)》");
+        //}
 
         #endregion
 
         #region --insert table
 
+        /// <summary>
+        /// 插入表格
+        /// </summary>
+        /// <param name="table"></param>
+        /// <param name="row"></param>
+        /// <param name="col"></param>
         public void InsertTable(DataTable table, int row, int col)
         {
             ICell cell = GetCell(row, col);
-            if (cell != null)
-            {
-                int rowCount = table.Rows.Count;
-                int rowIndex = cell.RowIndex;               
-                InsertTable(table, rowIndex, true);
-            }
+            int rowIndex = cell.RowIndex;
+            InsertTable(table, rowIndex, true);
+
         }
 
 
         public void ReplaceInsertTable(string what, DataTable table)
         {
-            ICell cell = FindFirstCell(currentSheet, what);
+            ICell cell = Find(currentSheet, what);
             if (cell != null)
-            {                            
-                int rowCount = table.Rows.Count;                
-                int rowIndex = cell.RowIndex;     
-                ShiftRows(currentSheet, rowIndex + 1, rowIndex + rowCount, rowCount - 1);//keep what row
+            {
+                int rowCount = table.Rows.Count;
+                int rowIndex = cell.RowIndex;
+                ShiftRows(currentSheet, rowIndex + 1, rowIndex + rowCount, rowCount - 1); //keep what row
                 InsertTable(table, rowIndex, false);
             }
         }
@@ -140,9 +192,9 @@ namespace BuildExcel
             InsertTable(table, rowIndex, hasHeader, GetThinBDRStyle());
         }
 
-        private void InsertTable(DataTable table, int rowIndex, bool hasHeader,ICellStyle style)
+        private void InsertTable(DataTable table, int rowIndex, bool hasHeader, ICellStyle style)
         {
-            var sheet = currentSheet;          
+            var sheet = currentSheet;
             if (hasHeader)
             {
                 var headerRow = sheet.CreateRow(rowIndex);
@@ -170,14 +222,14 @@ namespace BuildExcel
         #endregion
 
         #region--find cell / find all
-        private ICell FindFirstCell(ISheet sheet, string text)
+        private ICell Find(ISheet sheet, string text)
         {
             for (int rowIndex = 0; rowIndex < sheet.LastRowNum; rowIndex++)
             {
-                IRow row = sheet.GetRow(rowIndex);
+                IRow row = GetRow(rowIndex);
                 for (int cellIndex = 0; cellIndex < row.LastCellNum; cellIndex++)
                 {
-                    ICell cell = row.GetCell(cellIndex);
+                    ICell cell = GetCell(row, cellIndex);
                     if (cell.StringCellValue.Equals(text))
                     {
                         return cell;
@@ -187,16 +239,34 @@ namespace BuildExcel
             return null;
         }
 
+        private ICell Find(CellRangeAddress range, string text)
+        {            
+            for (int rowIndex = range.FirstRow; rowIndex <= range.LastRow; rowIndex++)
+            {
+                IRow row = GetRow(rowIndex);
+                for (int cellIndex = range.FirstColumn; cellIndex <= range.LastColumn; cellIndex++)
+                {
+                    ICell cell = GetCell(row, cellIndex);
+                    if (cell.StringCellValue.Equals(text))
+                    {
+                        return cell;
+                    }
+                }
+            }
+            return null;
+        }
+
+      
         private List<string> FindAllText(ISheet sheet, string pattern)
         {
             List<string> labels = new List<string>();
             Regex labelRegex = new Regex(pattern);
-            for (int rowIndex = 0; rowIndex < sheet.LastRowNum; rowIndex++)
+            for (int rIndex = sheet.FirstRowNum; rIndex < sheet.LastRowNum; rIndex++)
             {
-                IRow row = sheet.GetRow(rowIndex);
-                for (int cellIndex = 0; cellIndex < row.LastCellNum; cellIndex++)
+                IRow row = GetRow(rIndex);
+                for (int cIndex = row.FirstCellNum; cIndex < row.LastCellNum; cIndex++)
                 {
-                    ICell cell = row.GetCell(cellIndex);
+                    ICell cell = GetCell(row, cIndex);
                     string strValue = cell.StringCellValue;
                     if (labelRegex.IsMatch(strValue))
                     {
@@ -208,12 +278,78 @@ namespace BuildExcel
                     }
                 }
             }
-            return labels;            
+            return labels;
         }
+
+        //private List<string> FindAllTextInRange(CellRangeAddress range, string pattern)
+        //{
+        //    return FindAll(range.FirstRow, range.LastRow, range.FirstColumn, range.LastColumn, pattern);
+        //}
+
+        //private List<string> FindAll(int firstRow, int lastRow, string pattern)
+        //{
+        //    List<string> labels = new List<string>();
+        //    Regex labelRegex = new Regex(pattern);
+        //    for (int rowIndex = firstRow; rowIndex <= lastRow; rowIndex++)
+        //    {
+        //        IRow row = GetRow(rowIndex);
+        //        for (int cellIndex = row.FirstCellNum; cellIndex <= row.LastCellNum; cellIndex++)
+        //        {
+        //            var cell = row.GetCell(cellIndex);
+        //            var strValue = cell.StringCellValue;
+        //            labels.AddRange(Matches(strValue, labelRegex));
+        //        }
+        //    }
+        //    return labels;
+        //}
+
+
+        //private List<string> Matches(string value, Regex regex)
+        //{
+        //    var labels = new List<string>();
+        //    if (!regex.IsMatch(value)) return labels;
+        //    var matchCollection = regex.Matches(value);
+        //    labels.AddRange(from Match match in matchCollection select match.Value);
+        //    return labels;
+        //}
+
+
+        //private List<string> FindAll(int firstRow, int lastRow, int firstColumn, int lastColumn, string pattern)
+        //{
+        //    List<string> labels = new List<string>();
+        //    Regex labelRegex = new Regex(pattern);
+        //    for (int rowIndex = firstRow; rowIndex <= lastRow; rowIndex++)
+        //    {
+        //        IRow row = GetRow(rowIndex);
+        //        for (int cellIndex = firstColumn; cellIndex <= lastColumn; cellIndex++)
+        //        {
+        //            ICell cell = row.GetCell(cellIndex);
+        //            string strValue = cell.StringCellValue;
+        //            if (labelRegex.IsMatch(strValue))
+        //            {
+        //                MatchCollection matchCollection = labelRegex.Matches(strValue);
+        //                foreach (Match match in matchCollection)
+        //                {
+        //                    labels.Add(match.Value);
+        //                }
+        //            }
+        //        }
+        //    }
+        //    return labels;
+        //}
 
         #endregion
 
-        #region--merge region
+        #region--find regin / merge region
+
+        private CellRangeAddress FindRange(string rangeName)
+        {
+            var name = workbook.GetName(rangeName);
+            var range = CellRangeAddress.ValueOf(name.RefersToFormula);
+            return range;
+        }
+
+
         public void MergedRegion(int firstRow, int lastRow, int firstCol, int lastCol)
         {
             currentSheet.AddMergedRegion(new CellRangeAddress(firstRow, lastRow, firstCol, lastCol));
@@ -327,6 +463,17 @@ namespace BuildExcel
         {
             IRow curRow = GetRow(row);            
             return CellUtil.GetCell(curRow, col);
+        }
+
+        /// <summary>
+        /// 获取单元对象
+        /// </summary>
+        /// <param name="row"></param>
+        /// <param name="col"></param>
+        /// <returns></returns>
+        private ICell GetCell(IRow row, int col)
+        {
+            return CellUtil.GetCell(row, col);
         }
 
         /// <summary>
