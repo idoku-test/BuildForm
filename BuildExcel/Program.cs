@@ -21,11 +21,12 @@ namespace BuildExcel
 
             FileStream file = new FileStream(@"Excel/template3.xls", FileMode.Open, FileAccess.ReadWrite);
             BuildExcel excel = new BuildExcel(file);
+            excel.CreateSheet("Sheet2");
             //excel.ReplaceInRange("a", "b", "temp");
             Stream ms = excel.GetStream();
             FileStream saveTo = new FileStream("d.xls", FileMode.Create);
             ms.CopyTo(saveTo);
-            ms.CopyTo(saveTo);
+            
             saveTo.Close();
             file.Close();
             Console.Read();

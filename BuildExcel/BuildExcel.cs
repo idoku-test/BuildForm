@@ -53,7 +53,7 @@ namespace BuildExcel
         private ICellStyle cellStyle = null;
 
 
-        #region 页操作
+        #region--create sheet
 
         /// <summary>
         /// 选择操作页
@@ -62,6 +62,17 @@ namespace BuildExcel
         public void SelectSheet(string sheetName)
         {
             currentSheet = (HSSFSheet) workbook.GetSheet(sheetName);
+        }
+
+        /// <summary>
+        /// 创建空白页
+        /// </summary>
+        /// <param name="sheetName"></param>
+        public void CreateSheet(string sheetName)
+        {
+            var sheet = workbook.GetSheet(sheetName);
+            if (sheet == null)
+                workbook.CreateSheet(sheetName);
         }
 
         #endregion
@@ -83,7 +94,22 @@ namespace BuildExcel
         #endregion
 
         #region --insert text
+        /// <summary>
+        /// 插入文本
+        /// </summary>    
+        /// <param name="text">替换内容</param>
+        /// <param name="bookmark">书签名称</param>
+        public void InsertText(string text, string bookmark)
+        {
+            Replace(bookmark, text);
+        }
 
+        /// <summary>
+        /// 插入文本
+        /// </summary>
+        /// <param name="text"></param>
+        /// <param name="row"></param>
+        /// <param name="col"></param>
         public void InsertText(string text, int row, int col)
         {
             IRow r = CellUtil.GetRow(row, currentSheet);
@@ -150,11 +176,11 @@ namespace BuildExcel
             return FindAllText(currentSheet, @"《([^》]+)》");
         }
 
-        //public List<string> GetBookmarks(string range)
-        //{
-        //    var r = FindRange(range);
-        //    return FindAllTextInRange(r, @"《([^》]+)》");
-        //}
+        public List<string> GetBookmarks(string rangeName)
+        {
+            var range = FindRange(rangeName);
+            return FindAllText(range, @"《([^》]+)》");
+        }
 
         #endregion
 
@@ -281,62 +307,35 @@ namespace BuildExcel
             return labels;
         }
 
-        //private List<string> FindAllTextInRange(CellRangeAddress range, string pattern)
-        //{
-        //    return FindAll(range.FirstRow, range.LastRow, range.FirstColumn, range.LastColumn, pattern);
-        //}
-
-        //private List<string> FindAll(int firstRow, int lastRow, string pattern)
-        //{
-        //    List<string> labels = new List<string>();
-        //    Regex labelRegex = new Regex(pattern);
-        //    for (int rowIndex = firstRow; rowIndex <= lastRow; rowIndex++)
-        //    {
-        //        IRow row = GetRow(rowIndex);
-        //        for (int cellIndex = row.FirstCellNum; cellIndex <= row.LastCellNum; cellIndex++)
-        //        {
-        //            var cell = row.GetCell(cellIndex);
-        //            var strValue = cell.StringCellValue;
-        //            labels.AddRange(Matches(strValue, labelRegex));
-        //        }
-        //    }
-        //    return labels;
-        //}
+        private List<string> FindAllText(CellRangeAddress range, string pattern)
+        {
+            return FindAll(range.FirstRow, range.LastRow, range.FirstColumn, range.LastColumn, pattern);
+        }
 
 
-        //private List<string> Matches(string value, Regex regex)
-        //{
-        //    var labels = new List<string>();
-        //    if (!regex.IsMatch(value)) return labels;
-        //    var matchCollection = regex.Matches(value);
-        //    labels.AddRange(from Match match in matchCollection select match.Value);
-        //    return labels;
-        //}
-
-
-        //private List<string> FindAll(int firstRow, int lastRow, int firstColumn, int lastColumn, string pattern)
-        //{
-        //    List<string> labels = new List<string>();
-        //    Regex labelRegex = new Regex(pattern);
-        //    for (int rowIndex = firstRow; rowIndex <= lastRow; rowIndex++)
-        //    {
-        //        IRow row = GetRow(rowIndex);
-        //        for (int cellIndex = firstColumn; cellIndex <= lastColumn; cellIndex++)
-        //        {
-        //            ICell cell = row.GetCell(cellIndex);
-        //            string strValue = cell.StringCellValue;
-        //            if (labelRegex.IsMatch(strValue))
-        //            {
-        //                MatchCollection matchCollection = labelRegex.Matches(strValue);
-        //                foreach (Match match in matchCollection)
-        //                {
-        //                    labels.Add(match.Value);
-        //                }
-        //            }
-        //        }
-        //    }
-        //    return labels;
-        //}
+        private List<string> FindAll(int firstRow, int lastRow, int firstColumn, int lastColumn, string pattern)
+        {
+            List<string> labels = new List<string>();
+            Regex labelRegex = new Regex(pattern);
+            for (int rowIndex = firstRow; rowIndex <= lastRow; rowIndex++)
+            {
+                IRow row = GetRow(rowIndex);
+                for (int cellIndex = firstColumn; cellIndex <= lastColumn; cellIndex++)
+                {
+                    ICell cell = GetCell(row, cellIndex);
+                    string strValue = cell.StringCellValue;
+                    if (labelRegex.IsMatch(strValue))
+                    {
+                        MatchCollection matchCollection = labelRegex.Matches(strValue);
+                        foreach (Match match in matchCollection)
+                        {
+                            labels.Add(match.Value);
+                        }
+                    }
+                }
+            }
+            return labels;
+        }
 
         #endregion
 
