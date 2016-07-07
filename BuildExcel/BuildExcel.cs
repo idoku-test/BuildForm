@@ -17,6 +17,11 @@ namespace BuildExcel
 {
     public class BuildExcel
     {
+
+        private readonly int cellPiexWidth = 72;
+        private readonly int cellPiexHeight = 18;
+             
+
         public BuildExcel()
         {
             this.workbook = new HSSFWorkbook();
@@ -52,6 +57,7 @@ namespace BuildExcel
         /// </summary>
         private ICellStyle cellStyle = null;
 
+        
 
         #region--create sheet
 
@@ -243,6 +249,65 @@ namespace BuildExcel
                     cell.CellStyle = style;
                 }
             }
+        }
+
+        #endregion
+
+        #region--insert image
+
+        public void InsertImage()
+        {
+            
+        }
+
+        public void InserImage(Stream imageStream, int width, int height, int marginTop, int marginLeft)
+        {
+            var bytes = StreamToBytes(imageStream);
+            int pictureIdx = workbook.AddPicture(bytes, PictureType.JPEG);
+            // Create the drawing patriarch.  This is the top level container for all shapes. 
+            var patriarch = currentSheet.CreateDrawingPatriarch();
+
+            int left = marginLeft;
+            int right = left + width;
+            int top = marginTop;
+            int bottom = top + height;
+
+            int leftColNum = left/cellPiexWidth;
+            int leftDxNum = left%cellPiexWidth;
+            int leftRowNum = top/cellPiexHeight;
+            int leftDyNum = top%cellPiexHeight;
+
+
+            int rightColNum = right/cellPiexWidth;
+            int rightDxNum = right%cellPiexWidth;
+            int rightRowNum = bottom/cellPiexHeight;
+            int rightDyNum = bottom%cellPiexHeight;
+
+            ////add a picture
+            //HSSFClientAnchor anchor = new HSSFClientAnchor(leftDxNum, leftDyNum, rightDxNum, rightDyNum, leftColNum
+            //    , leftRowNum, rightColNum, rightRowNum);
+
+            HSSFClientAnchor anchor = new HSSFClientAnchor(500, 200, 1023, 100, 0
+              , 0, 7, 9);
+            var pict = patriarch.CreatePicture(anchor, pictureIdx);
+            pict.Resize();
+        }
+
+
+
+        private byte[] StreamToBytes(Stream stream)
+        {
+            byte[] bytes = new byte[stream.Length];
+            stream.Position = 0;//置于流开始位置
+            stream.Read(bytes, 0, bytes.Length);
+            stream.Seek(0, SeekOrigin.Begin);
+            return bytes;
+        }
+
+        private Stream BytesToStream(byte[] bytes)
+        {
+            Stream stream = new MemoryStream(bytes);
+            return stream;
         }
 
         #endregion

@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using NPOI.HSSF.UserModel;
 using System.IO;
 using System.Data;
+using System.Drawing;
+using System.Net.Mime;
 using NPOI.SS.UserModel;
 
 namespace BuildExcel
@@ -21,8 +23,23 @@ namespace BuildExcel
 
             FileStream file = new FileStream(@"Excel/template3.xls", FileMode.Open, FileAccess.ReadWrite);
             BuildExcel excel = new BuildExcel(file);
-            excel.CreateSheet("Sheet2");
+            
+            var image = Image.FromFile(@"Image/201508211237340.jpg");
             //excel.ReplaceInRange("a", "b", "temp");
+            MemoryStream ims = new MemoryStream();
+            image.Save(ims, System.Drawing.Imaging.ImageFormat.Jpeg);
+            ims.Position = 0;
+            //excel.InsertImage();
+            var spacingWidth = CmToPx(1.5);
+            var spacingHeight = CmToPx(2.1);
+
+            var leftMargin = CmToPx(1) ;
+            var topMargin = CmToPx(1.8) + spacingHeight;
+         
+            var photoHeight = CmToPx(8.5);
+            var photoWidth = CmToPx(6.4);
+
+            excel.InserImage(ims, photoWidth, photoHeight, topMargin, leftMargin);
             Stream ms = excel.GetStream();
             FileStream saveTo = new FileStream("d.xls", FileMode.Create);
             ms.CopyTo(saveTo);
@@ -30,6 +47,15 @@ namespace BuildExcel
             saveTo.Close();
             file.Close();
             Console.Read();
+        }
+
+        private static int CmToPx(double cm, int dpi = 96)
+        {
+            return (int)Math.Floor(cm / 2.54 * dpi);
+        }
+        private static int CmToPt(double cm, int dpi = 96)
+        {
+            return (int)Math.Floor(cm * 72 / dpi * 2.54);
         }
 
         private static void BookMarkTest()
