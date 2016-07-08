@@ -64,6 +64,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BuildExcel.cs" />
+    <Compile Include="ConvertImageUnits.cs" />
     <Compile Include="ExcelConstants.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

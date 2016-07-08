@@ -17,36 +17,53 @@ namespace BuildExcel
     {
         static void Main(string[] args)
         {
-
-          
             //BuildExcel excel = new BuildExcel();
-
             FileStream file = new FileStream(@"Excel/template3.xls", FileMode.Open, FileAccess.ReadWrite);
             BuildExcel excel = new BuildExcel(file);
+            excel.InsertTextBox("附件一：估价对象侨苑（二期）地理位置图", 0, 1, 2, 4);
+            Stream ms = excel.GetStream();
+            FileStream saveTo = new FileStream("d.xls", FileMode.Create);
+            ms.CopyTo(saveTo);
+
+            saveTo.Close();
+            file.Close();
             
+            Console.Read();
+        }
+
+        private static void ImageTest()
+        {
+            FileStream file = new FileStream(@"Excel/template3.xls", FileMode.Open, FileAccess.ReadWrite);
+            BuildExcel excel = new BuildExcel(file);
+
             var image = Image.FromFile(@"Image/201508211237340.jpg");
+            var image2 = Image.FromFile(@"Image/201508211237341.jpg");
             //excel.ReplaceInRange("a", "b", "temp");
             MemoryStream ims = new MemoryStream();
             image.Save(ims, System.Drawing.Imaging.ImageFormat.Jpeg);
             ims.Position = 0;
+
+            MemoryStream ims2 = new MemoryStream();
+            image2.Save(ims2, System.Drawing.Imaging.ImageFormat.Jpeg);
+            ims2.Position = 0;
             //excel.InsertImage();
             var spacingWidth = CmToPx(1.5);
             var spacingHeight = CmToPx(2.1);
 
-            var leftMargin = CmToPx(1) ;
-            var topMargin = CmToPx(1.8) + spacingHeight;
-         
+            var leftMargin = CmToPx(1);
+            var topMargin = CmToPx(1.8);
+
             var photoHeight = CmToPx(8.5);
             var photoWidth = CmToPx(6.4);
 
-            excel.InserImage(ims, photoWidth, photoHeight, topMargin, leftMargin);
+            excel.InsertImage(ims, photoWidth, photoHeight, CmToPx(1.8), CmToPx(1));
+            excel.InsertImage(ims2, photoWidth, photoHeight, CmToPx(1.8), CmToPx(1 + 2) + photoWidth);
             Stream ms = excel.GetStream();
             FileStream saveTo = new FileStream("d.xls", FileMode.Create);
             ms.CopyTo(saveTo);
-            
+
             saveTo.Close();
             file.Close();
-            Console.Read();
         }
 
         private static int CmToPx(double cm, int dpi = 96)

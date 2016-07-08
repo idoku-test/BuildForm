@@ -6,21 +6,33 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using NPOI.HSSF.Record.CF;
+using NPOI.XSSF.UserModel;
+
 
 namespace BuildExcel
 {
     public class BuildExcel
     {
 
+        public static int TotalColumnCoordinatePositions = 1023; //MB
+        public static int TotalRowCoordinatePositions = 255; //MB
+        public static int PixelsPerInch = 96; //MB
+        public static double PixelsPerMillimetres = 3.78; //MB
+        public static short ExcelColumnWidthFactor = 256;
+        public static int UnitOffsetLength = 7;
+
+        public static int[] UnitOffsetMap = new int[] {0, 36, 73, 109, 146, 182, 219};
+
         private readonly int cellPiexWidth = 72;
         private readonly int cellPiexHeight = 18;
-             
+
 
         public BuildExcel()
         {
@@ -57,7 +69,7 @@ namespace BuildExcel
         /// </summary>
         private ICellStyle cellStyle = null;
 
-        
+
 
         #region--create sheet
 
@@ -100,6 +112,7 @@ namespace BuildExcel
         #endregion
 
         #region --insert text
+
         /// <summary>
         /// 插入文本
         /// </summary>    
@@ -122,11 +135,12 @@ namespace BuildExcel
             if (r == null)
                 r = currentSheet.CreateRow(row);
             ICell cell = CellUtil.CreateCell(r, col, text, CreateStyle());
-        }       
+        }
 
         #endregion
 
         #region--replace text
+
         public void Replace(string what, string replacement)
         {
             Replace(currentSheet, what, replacement);
@@ -168,7 +182,8 @@ namespace BuildExcel
                     }
                 }
             }
-        }       
+        }
+
         #endregion
 
         #region--GetBookmarks，GetAllMarks，DelBookmarks
@@ -226,6 +241,7 @@ namespace BuildExcel
 
         private void InsertTable(DataTable table, int rowIndex, bool hasHeader, ICellStyle style)
         {
+            
             var sheet = currentSheet;
             if (hasHeader)
             {
@@ -255,50 +271,58 @@ namespace BuildExcel
 
         #region--insert image
 
-        public void InsertImage()
-        {
-            
-        }
-
-        public void InserImage(Stream imageStream, int width, int height, int marginTop, int marginLeft)
+        private void InsertImage(ISheet sheet, Stream imageStream, int top, int bottom, int left, int right)
         {
             var bytes = StreamToBytes(imageStream);
             int pictureIdx = workbook.AddPicture(bytes, PictureType.JPEG);
             // Create the drawing patriarch.  This is the top level container for all shapes. 
-            var patriarch = currentSheet.CreateDrawingPatriarch();
-
-            int left = marginLeft;
-            int right = left + width;
-            int top = marginTop;
-            int bottom = top + height;
-
-            int leftColNum = left/cellPiexWidth;
-            int leftDxNum = left%cellPiexWidth;
-            int leftRowNum = top/cellPiexHeight;
-            int leftDyNum = top%cellPiexHeight;
-
-
-            int rightColNum = right/cellPiexWidth;
-            int rightDxNum = right%cellPiexWidth;
-            int rightRowNum = bottom/cellPiexHeight;
-            int rightDyNum = bottom%cellPiexHeight;
-
+            var patriarch = (HSSFPatriarch) sheet.CreateDrawingPatriarch();
             ////add a picture
-            //HSSFClientAnchor anchor = new HSSFClientAnchor(leftDxNum, leftDyNum, rightDxNum, rightDyNum, leftColNum
-            //    , leftRowNum, rightColNum, rightRowNum);
+            HSSFClientAnchor anchor = new HSSFClientAnchor();
+            anchor.Col1 = left/cellPiexWidth;
+            anchor.Row1 = top/cellPiexHeight;
+            anchor.Col2 = right/cellPiexWidth;
+            anchor.Row2 = bottom/cellPiexHeight;
+            anchor.Dx1 = GetAnchorX(left%cellPiexWidth);
+            anchor.Dy1 = GetAnchorY(top%cellPiexHeight);
+            anchor.Dx2 = GetAnchorX(right%cellPiexWidth);
+            anchor.Dy2 = GetAnchorY(bottom%cellPiexHeight);
+            //HSSFClientAnchor anchor = new HSSFClientAnchor(500, 200, 1023, 100, 0
+            //    , 0, 7, 9);
+            patriarch.CreatePicture(anchor, pictureIdx);
 
-            HSSFClientAnchor anchor = new HSSFClientAnchor(500, 200, 1023, 100, 0
-              , 0, 7, 9);
-            var pict = patriarch.CreatePicture(anchor, pictureIdx);
-            pict.Resize();
+            //pict.Resize();
+        }
+
+        public void InsertImage(Stream imageStream, int width, int height, int marginTop, int marginLeft)
+        {
+            InsertImage(currentSheet, imageStream, marginTop, marginTop + height, marginLeft, marginLeft + width);
+        }
+
+
+        public void InsertImage(Stream imageStream, int marginTop, int marginLeft)
+        {                  
+            Image image = Image.FromStream(imageStream);
+            InsertImage(currentSheet, imageStream, marginTop, marginTop + image.Height, marginLeft,
+                marginLeft + image.Height);
         }
 
 
 
+        private int GetAnchorX(int px)
+        {
+            return (int)Math.Round(1023d / cellPiexWidth * px);
+        }
+
+        private int GetAnchorY(int px)
+        {
+            return (int)Math.Round(255d / cellPiexHeight * px);
+        }       
+
         private byte[] StreamToBytes(Stream stream)
         {
             byte[] bytes = new byte[stream.Length];
-            stream.Position = 0;//置于流开始位置
+            stream.Position = 0; //置于流开始位置
             stream.Read(bytes, 0, bytes.Length);
             stream.Seek(0, SeekOrigin.Begin);
             return bytes;
@@ -312,7 +336,32 @@ namespace BuildExcel
 
         #endregion
 
+        #region--insert textbox
+
+        public void InsertTextBox(string text, int top, int bottom, int left, int right)
+        {
+            var patriarch = (HSSFPatriarch)currentSheet.CreateDrawingPatriarch();
+            HSSFClientAnchor anchor = new HSSFClientAnchor();            
+            anchor.Col1 = left / cellPiexWidth;
+            anchor.Row1 = top / cellPiexHeight;
+            anchor.Col2 = right / cellPiexWidth;
+            anchor.Row2 = bottom / cellPiexHeight;
+            anchor.Dx1 = GetAnchorX(left % cellPiexWidth);
+            anchor.Dy1 = GetAnchorY(top % cellPiexHeight);
+            anchor.Dx2 = GetAnchorX(right % cellPiexWidth);
+            anchor.Dy2 = GetAnchorY(bottom % cellPiexHeight);
+
+            var textbox = patriarch.CreateTextbox(anchor);
+            textbox.String = new HSSFRichTextString(text);            
+            textbox.IsNoFill = true;
+            textbox.LineStyle = LineStyle.None;
+            
+        }
+
+        #endregion
+
         #region--find cell / find all
+
         private ICell Find(ISheet sheet, string text)
         {
             for (int rowIndex = 0; rowIndex < sheet.LastRowNum; rowIndex++)
@@ -331,7 +380,7 @@ namespace BuildExcel
         }
 
         private ICell Find(CellRangeAddress range, string text)
-        {            
+        {
             for (int rowIndex = range.FirstRow; rowIndex <= range.LastRow; rowIndex++)
             {
                 IRow row = GetRow(rowIndex);
@@ -347,7 +396,7 @@ namespace BuildExcel
             return null;
         }
 
-      
+
         private List<string> FindAllText(ISheet sheet, string pattern)
         {
             List<string> labels = new List<string>();
@@ -418,9 +467,11 @@ namespace BuildExcel
         {
             currentSheet.AddMergedRegion(new CellRangeAddress(firstRow, lastRow, firstCol, lastCol));
         }
+
         #endregion
 
         #region -- set border
+
         public void SetBorder(int firstRow, int lastRow, int firstCol, int lastCol)
         {
             for (int rowIndex = firstRow; rowIndex < lastRow; rowIndex++)
@@ -436,26 +487,30 @@ namespace BuildExcel
 
         private void SetBorderLeft(int firstRow, int lastRow, int firstCol, int lastCol)
         {
-            HSSFRegionUtil.SetBorderLeft(BorderStyle.THIN, new CellRangeAddress(firstRow, lastRow, firstCol, lastCol), currentSheet, workbook);
+            HSSFRegionUtil.SetBorderLeft(BorderStyle.THIN, new CellRangeAddress(firstRow, lastRow, firstCol, lastCol),
+                currentSheet, workbook);
         }
 
         private void SetBorderRight(int firstRow, int lastRow, int firstCol, int lastCol)
         {
-            HSSFRegionUtil.SetBorderRight(BorderStyle.THIN, new CellRangeAddress(firstRow, lastRow, firstCol, lastCol), currentSheet, workbook);
+            HSSFRegionUtil.SetBorderRight(BorderStyle.THIN, new CellRangeAddress(firstRow, lastRow, firstCol, lastCol),
+                currentSheet, workbook);
         }
 
         private void SetBorderBottom(int firstRow, int lastRow, int firstCol, int lastCol)
         {
-            HSSFRegionUtil.SetBorderTop(BorderStyle.THIN, new CellRangeAddress(firstRow, lastRow, firstCol, lastCol), currentSheet, workbook);
+            HSSFRegionUtil.SetBorderTop(BorderStyle.THIN, new CellRangeAddress(firstRow, lastRow, firstCol, lastCol),
+                currentSheet, workbook);
         }
 
         private void SetBorderTop(int firstRow, int lastRow, int firstCol, int lastCol)
         {
-            HSSFRegionUtil.SetBorderTop(BorderStyle.THIN, new CellRangeAddress(firstRow, lastRow, firstCol, lastCol), currentSheet, workbook);
+            HSSFRegionUtil.SetBorderTop(BorderStyle.THIN, new CellRangeAddress(firstRow, lastRow, firstCol, lastCol),
+                currentSheet, workbook);
         }
 
         private ICellStyle GetThinBDRStyle()
-        {         
+        {
             ICellStyle style = workbook.CreateCellStyle();
             style.BorderRight = BorderStyle.THIN;
             style.BorderBottom = BorderStyle.THIN;
@@ -477,9 +532,11 @@ namespace BuildExcel
                 }
             }
         }
+
         #endregion
 
         #region--set style
+
         private ICellStyle CreateStyle()
         {
             ICellStyle style = workbook.CreateCellStyle();
@@ -493,7 +550,7 @@ namespace BuildExcel
         /// <param name="col"></param>
         public void SetCellCenter(int row, int col)
         {
-            ICell cell = GetCell(row, col);            
+            ICell cell = GetCell(row, col);
             ICellStyle style = cell.CellStyle;
             style.Alignment = HorizontalAlignment.CENTER;
             cell.CellStyle = style;
@@ -505,18 +562,21 @@ namespace BuildExcel
         /// <param name="fontHeight"></param>
         /// <param name="row"></param>
         /// <param name="col"></param>
-        public void SetCellFont(int fontHeight,int row, int col) {
+        public void SetCellFont(int fontHeight, int row, int col)
+        {
             ICell cell = GetCell(row, col);
             ICellStyle style = cell.CellStyle;
             IFont font = workbook.CreateFont();
-            font.FontHeight = (short)fontHeight;
+            font.FontHeight = (short) fontHeight;
             style.SetFont(font);
             cell.CellStyle = style;
 
         }
+
         #endregion
 
         #region-- get row/cell
+
         /// <summary>
         /// 获取单元对象
         /// </summary>
@@ -525,7 +585,7 @@ namespace BuildExcel
         /// <returns></returns>
         private ICell GetCell(int row, int col)
         {
-            IRow curRow = GetRow(row);            
+            IRow curRow = GetRow(row);
             return CellUtil.GetCell(curRow, col);
         }
 
@@ -549,9 +609,11 @@ namespace BuildExcel
         {
             return CellUtil.GetRow(row, currentSheet);
         }
+
         #endregion
 
         #region--debug
+
         [ConditionalAttribute("DEBUG")]
         public void PrintCurrentSheet()
         {
@@ -564,9 +626,11 @@ namespace BuildExcel
                 }
             }
         }
+
         #endregion
 
         #region DataTable helper    
+
         /// <summary>
         /// 移动行
         /// </summary>
@@ -574,7 +638,7 @@ namespace BuildExcel
         /// <param name="fromRowIndex"></param>
         /// <param name="endRowIndex"></param>
         /// <param name="n"></param>
-        private void ShiftRows(ISheet sheet, int fromRowIndex,int endRowIndex, int n)
+        private void ShiftRows(ISheet sheet, int fromRowIndex, int endRowIndex, int n)
         {
             sheet.ShiftRows(fromRowIndex, endRowIndex, n, false, true);
         }
@@ -586,12 +650,12 @@ namespace BuildExcel
         /// <param name="sourceRowIndex"></param>
         /// <param name="formRowIndex"></param>
         /// <param name="n"></param>
-        private void CopyRows(ISheet sheet, int sourceRowIndex,int formRowIndex, int n)
+        private void CopyRows(ISheet sheet, int sourceRowIndex, int formRowIndex, int n)
         {
             for (int i = formRowIndex; i < formRowIndex + n; i++)
-            {                
+            {
                 SheetUtil.CopyRow(sheet, sourceRowIndex, i);
-            }                
+            }
         }
 
         /// <summary>
@@ -618,9 +682,10 @@ namespace BuildExcel
         //        }
         //    }
         //}
+
         #endregion
 
-       
+
 
     }
 }
