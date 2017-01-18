@@ -93,6 +93,15 @@ namespace BuildExcel
                 workbook.CreateSheet(sheetName);
         }
 
+        /// <summary>
+        /// 设置页名称
+        /// </summary>
+        /// <param name="index"></param>
+        /// <param name="sheetName"></param>
+        public void SetSheetName(int index, string sheetName)
+        {
+            workbook.SetSheetName(index, sheetName);
+        }
         #endregion
 
         #region--get stream
@@ -107,6 +116,18 @@ namespace BuildExcel
             workbook.Write(stream);
             stream.Position = 0;
             return stream;
+        }
+
+        #endregion
+
+        #region--sava
+
+        public void SaveAs(string filename)
+        {
+            using (FileStream file = new FileStream(filename, FileMode.Create))
+            {
+                 workbook.Write(file);
+            }
         }
 
         #endregion
@@ -573,7 +594,25 @@ namespace BuildExcel
 
         }
 
+        public void SetFont(int firstRow, int lastRow, int firstCol, int lastCol)
+        {
+            for (int rowIndex = firstRow; rowIndex < lastRow; rowIndex++)
+            {
+                var row = HSSFCellUtil.GetRow(rowIndex, currentSheet);
+                for (int cellIndex = firstCol; cellIndex < lastCol; cellIndex++)
+                {
+                    var cell = HSSFCellUtil.GetCell(row, cellIndex);
+                    ICellStyle style = workbook.CreateCellStyle();
+                    IFont font = workbook.CreateFont();
+                    font.Boldweight = (short)FontBoldWeight.BOLD;
+                    style.SetFont(font);
+                    cell.CellStyle = style;
+                }
+            }
+        }
         #endregion
+
+     
 
         #region-- get row/cell
 

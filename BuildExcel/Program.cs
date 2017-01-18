@@ -18,17 +18,32 @@ namespace BuildExcel
         static void Main(string[] args)
         {
             //BuildExcel excel = new BuildExcel();
-            FileStream file = new FileStream(@"Excel/template3.xls", FileMode.Open, FileAccess.ReadWrite);
-            BuildExcel excel = new BuildExcel(file);
-            excel.InsertTextBox("附件一：估价对象侨苑（二期）地理位置图", 0, 1, 2, 4);
-            Stream ms = excel.GetStream();
-            FileStream saveTo = new FileStream("d.xls", FileMode.Create);
-            ms.CopyTo(saveTo);
+            //FileStream file = new FileStream(@"Excel/template3.xls", FileMode.Open, FileAccess.ReadWrite);
+            //BuildExcel excel = new BuildExcel(file);
+            //excel.InsertTextBox("附件一：估价对象侨苑（二期）地理位置图", 0, 1, 2, 4);
+            //excel.SaveAs("d.xls");
+            //Stream ms = excel.GetStream();
+            //FileStream saveTo = new FileStream("d.xls", FileMode.Create);
+            //ms.CopyTo(saveTo);
 
-            saveTo.Close();
-            file.Close();
-            
+            //saveTo.Close();
+            //file.Close();
+
+            FontTest();
+
             Console.Read();
+        }
+
+        private static void FontTest()
+        {
+            BuildExcel excel = new BuildExcel();
+            DataTable table = CreateTable(3, 8);
+            excel.InsertTable(table, 0, 0);
+            excel.SetFont(0,1,0,5);
+            Stream ms = excel.GetStream();
+            FileStream file = new FileStream("d.xls", FileMode.Create);
+            ms.CopyTo(file);
+            excel.GetStream();
         }
 
         private static void ImageTest()
@@ -158,8 +173,13 @@ namespace BuildExcel
             for (int j = 0; j <= rowNums; j++)
             {
                 DataRow row = table.NewRow();
+                for (int r = 0; r < colNums; r++)
+                {
+                    row[r] = r + " " + j;
+                }
                 table.Rows.Add(row);
             }
+            
             return table;
         }
 
